@@ -27,10 +27,10 @@ export const get = async (req: Request, res: Response) => {
 };
 
 export const view = async (req: Request, res: Response) => {
-    const userId = parseInt(req.params.id)
+    const id = parseInt(req.params.id)
     try {
-        const users = await query('SELECT * FROM users WHERE UserID = $1', [userId]);
-        res.json(users);
+        const user = await query('SELECT * FROM users WHERE userid = $1', [id]);
+        res.json(user);
     } catch (e: any) {
         res.json({ message: e['detail'] })
     }
@@ -51,16 +51,56 @@ export const post = async (req: Request, res: Response) => {
 };
 
 export const put = async (req: Request, res: Response) => {
-    const users: string = "users"
-    res.json(users);
+    const { id } = req.params;
+    const { username, password, email, fullname, membership } = req.body || req.query;
+
+    // TODO: HASH PASSWORD
+
+    try {
+        await query('UPDATE users SET username = $1, password = $2, email = $3, fullname = $4, membership = $5 WHERE userid = $6', [username, password, email, fullname, membership, id]);
+
+        res.status(200).json({ message: 'User updated successfully' });
+    } catch (e: any) {
+        res.status(400).json({ message: 'Failed to update user' });
+    }
 };
 
 export const patch = async (req: Request, res: Response) => {
-    const users: string = "users"
-    res.json(users);
+    const { id } = req.params;
+    const { username, password, email, fullname, membership } = req.body || req.query;
+
+    // TODO: HASH PASSWORD (if password is included in the request body)
+
+    try {
+        const updates: any = {};
+        if (username) updates.username = username;
+        if (password) updates.password = password;
+        if (email) updates.email = email;
+        if (fullname) updates.fullname = fullname;
+        if (membership) updates.membership = membership;
+
+
+        if (Object.keys(updates).length > 0) {
+            const queryUpdate = `UPDATE users SET ${Object.entries(updates).map(([key, value]) => `${key} = $${Object.keys(updates).indexOf(key) + 1}`).join(', ')} WHERE userid = $${Object.keys(updates).length + 1}`;
+            const values = [...Object.values(updates), id];
+            await query(queryUpdate, values);
+
+            res.status(200).json({ message: 'User updated successfully' });
+        } else {
+            res.status(400).json({ message: 'No updates provided' });
+        }
+    } catch (e: any) {
+        res.status(400).json({ message: 'Failed to update user' });
+    }
 };
 
 export const remove = async (req: Request, res: Response) => {
-    const users: string = "users"
-    res.json(users);
+    const id = parseInt(req.params.id)
+    try {
+        await query('DELETE FROM users WHERE UserID = $1', [id]);
+        res.json({ message: 'User deleted' });
+    } catch (e: any) {
+        console.log(e)
+        res.json({ message: e['detail'] })
+    }
 };
